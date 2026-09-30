@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>海外購物清單</title>
+  
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#FBF8F1">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            paper: '#FBF8F1',
+            paperCard: '#FFFDF9',
+            borderDotted: '#D9C3B0',
+            brandBrown: '#5C4636',
+            brandLightBrown: '#8C725E',
+            accentOrange: '#E07A5F',
+            accentGreen: '#81B29A',
+            softGray: '#EFECE6'
+          },
+          fontFamily: {
+            handwriting: ['"Zen Maru Gothic"', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #FBF8F1;
+      font-family: 'Zen Maru Gothic', sans-serif;
+      color: #5C4636;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .dotted-box { 
+      border: 2px dashed #D9C3B0; 
+      border-radius: 20px; 
+    }
+    .custom-checkbox {
+      width: 22px; height: 22px; border: 2px solid #E07A5F; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; cursor: pointer;
+    }
+    .custom-checkbox.checked { background-color: #E07A5F; }
+    .custom-checkbox.checked::after { content: '✓'; color: white; font-size: 14px; font-weight: bold; }
+  </style>
+</head>
+<body class="pb-12 pt-6 px-4 max-w-md mx-auto min-h-screen relative">
+
+  <!-- 頂部大虛線外框標題區 -->
+  <div class="dotted-box bg-paperCard p-6 text-center mb-5 shadow-sm">
+    <div class="flex items-center justify-center gap-2 mb-2 cursor-pointer hover:opacity-80 transition" onclick="editMainTitle()">
+      <i class="fa-solid fa-bag-shopping text-accentOrange text-2xl"></i>
+      <h1 id="mainTitleText" class="text-2xl font-bold text-brandBrown tracking-wide">海外購物清單</h1>
+    </div>
+    <div id="subTitleText" onclick="editSubTitle()" class="text-xs text-brandLightBrown cursor-pointer hover:opacity-80 transition">
+      點擊此處可修改副標題與備註說明
+    </div>
+  </div>
+
+  <!-- 數據統計與新增分類 -->
+  <div class="bg-paperCard dotted-box p-3.5 mb-4 shadow-sm">
+    <div class="flex justify-between items-center mb-2">
+      <div class="text-xs font-bold text-brandBrown">
+        已完成: <span id="completedCount" class="text-accentGreen">0</span>/<span id="totalCount">0</span>
+      </div>
+      <div class="flex items-center gap-1">
+        <select id="currencySelect" onchange="changeCurrency(this.value)" class="bg-white border border-dottedBorder rounded-lg px-2 py-0.5 text-xs font-bold text-brandBrown focus:outline-none cursor-pointer">
+          <option value="JPY">🇯🇵 日幣 (JPY)</option>
+          <option value="KRW">🇰🇷 韓元 (KRW)</option>
+          <option value="CNY">🇨🇳 人民幣 (CNY)</option>
+          <option value="THB">🇹🇭 泰銖 (THB)</option>
+          <option value="SGD">🇸🇬 新加坡幣 (SGD)</option>
+          <option value="MYR">🇲🇾 馬來西亞幣 (MYR)</option>
+          <option value="EUR">🇪🇺 歐元 (EUR)</option>
+          <option value="NZD">🇳🇿 紐西蘭幣 (NZD)</option>
+          <option value="AUD">🇦🇺 澳幣 (AUD)</option>
+          <option value="HKD">🇭🇰 港幣 (HKD)</option>
+          <option value="MOP">🇲🇴 澳門幣 (MOP)</option>
+          <option value="IDR">🇮🇩 印尼盾 (IDR)</option>
+        </select>
+        <button onclick="addNewGroup()" class="bg-[#5C4636] text-paper px-3 py-1 rounded-full text-xs font-bold shadow active:scale-95 transition flex items-center gap-1 ml-1">
+          <i class="fa-solid fa-plus"></i> 新增分類
+        </button>
+      </div>
+    </div>
+
+    <!-- 預算總計與台幣換算顯示 -->
+    <div class="flex items-baseline justify-between pt-1 border-t border-dottedBorder/60">
+      <div class="text-xs font-bold text-brandLightBrown">總預算金額:</div>
+      <div class="text-right">
+        <div class="text-base font-bold text-accentOrange">
+          <span id="totalPrice">0</span> <span id="currencyUnit">円</span>
+        </div>
+        <div class="text-[11px] font-bold text-brandLightBrown/80">
+          約 NT$ <span id="totalTwdPrice">0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 商品分類區塊 -->
+  <div id="groupList" class="space-y-4 mb-4"></div>
+
+  <!-- 獨立折價券區塊（最下方） -->
+  <div class="dotted-box bg-paperCard p-3 transition-all">
+    <div id="couponHeader" class="flex justify-between items-center pb-2 mb-2 border-b border-dottedBorder/60">
+      <div class="flex items-center gap-2 cursor-pointer flex-1" onclick="toggleCouponSection()">
+        <i id="couponCaret" class="fa-solid fa-caret-down text-accentOrange"></i>
+        <span class="font-bold text-sm text-brandBrown"><i class="fa-solid fa-ticket text-accentOrange mr-1"></i>優惠券 & 折價券</span>
+      </div>
+      <button onclick="addCoupon()" class="text-xs text-accentGreen font-bold hover:underline"><i class="fa-solid fa-plus"></i> 新增優惠券</button>
+    </div>
+    <div id="couponList" class="grid grid-cols-2 gap-2.5"></div>
+  </div>
+
+  <!-- 點擊照片出現的圖片操作彈窗 (底頁選單) -->
+  <div id="imageActionModal" class="fixed inset-0 bg-black/40 z-50 flex items-end justify-center hidden transition-opacity" onclick="closeImageModal()">
+    <div class="bg-paperCard w-full max-w-md rounded-t-2xl p-4 dotted-box border-b-0 space-y-3 shadow-2xl" onclick="event.stopPropagation()">
+      <div class="text-center font-bold text-sm text-brandBrown pb-2 border-b border-dottedBorder/60 flex justify-between items-center">
+        <span><i class="fa-solid fa-image text-accentOrange mr-1"></i> 圖片操作選項</span>
+        <button onclick="closeImageModal()" class="text-gray-400 hover:text-brandBrown"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <!-- iPhone 一鍵貼上截圖 -->
+      <button onclick="pasteImageFromClipboard()" class="w-full bg-accentOrange text-white py-2.5 rounded-xl text-xs font-bold shadow flex items-center justify-center gap-2 active:scale-95 transition">
+        <i class="fa-solid fa-paste"></i> 貼上剪貼簿圖片 (iPhone 截圖)
+      </button>
+
+      <!-- 從相簿或相機選擇照片 -->
+      <label class="w-full bg-paper border border-dottedBorder text-brandBrown py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition">
+        <i class="fa-solid fa-camera"></i> 從相簿選擇 / 拍照
+        <input type="file" id="modalFileInput" accept="image/*" class="hidden" onchange="handleModalFileUpload(event)">
+      </label>
+
+      <!-- 刪除圖片 -->
+      <button id="deleteImgBtn" onclick="deleteTargetImage()" class="w-full bg-red-50 text-red-500 border border-red-200 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 active:scale-95 transition hidden">
+        <i class="fa-solid fa-trash-can"></i> 刪除此照片
+      </button>
+
+      <button onclick="closeImageModal()" class="w-full bg-softGray text-brandLightBrown py-2 rounded-xl text-xs font-bold">
+        取消
+      </button>
+    </div>
+  </div>
+
+  <script>
+    if (window.location.search.includes('reset=1')) {
+      localStorage.removeItem('handbook_shopping_data');
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    const currencyConfig = {
+      JPY: { name: '日幣', unit: '円', rate: 0.21 },
+      KRW: { name: '韓元', unit: '₩', rate: 0.024 },
+      CNY: { name: '人民幣', unit: '¥', rate: 4.4 },
+      THB: { name: '泰銖', unit: '฿', rate: 0.92 },
+      SGD: { name: '新加坡幣', unit: 'S$', rate: 24.5 },
+      MYR: { name: '馬來西亞幣', unit: 'RM', rate: 7.2 },
+      EUR: { name: '歐元', unit: '€', rate: 35.0 },
+      NZD: { name: '紐西蘭幣', unit: 'NZ$', rate: 19.5 },
+      AUD: { name: '澳幣', unit: 'A$', rate: 21.2 },
+      HKD: { name: '港幣', unit: 'HK$', rate: 4.1 },
+      MOP: { name: '澳門幣', unit: 'MOP$', rate: 3.9 },
+      IDR: { name: '印尼盾', unit: 'Rp', rate: 0.0020 }
+    };
+
+    const defaultData = {
+      mainTitle: '海外購物清單',
+      subTitle: '點擊此處可修改副標題與備註說明',
+      currency: 'JPY',
+      couponCollapsed: false,
+      coupons: [
+        { id: 'c1', name: '唐吉訶德優惠券', note: '免稅10% + 5%折扣', image: '' }
+      ],
+      groups: [
+        {
+          id: 'g1',
+          name: '藥妝店',
+          collapsed: false,
+          items: [
+            { id: 'i1', name: '資生堂吸油面紙', note: '', price: '', image: '', checked: false },
+            { id: 'i2', name: 'Love Liner 眉筆', note: '自然棕', price: '1200', image: '', checked: false }
+          ]
+        }
+      ]
+    };
+
+    let appData;
+    try {
+      appData = JSON.parse(localStorage.getItem('handbook_shopping_data')) || defaultData;
+      if (!appData.groups || !Array.isArray(appData.groups)) appData = defaultData;
+      if (!appData.coupons) appData.coupons = defaultData.coupons;
+      if (!appData.mainTitle) appData.mainTitle = defaultData.mainTitle;
+      if (!appData.currency) appData.currency = 'JPY';
+    } catch(e) {
+      appData = defaultData;
+    }
+
+    let activeImageTarget = null;
+
+    function saveData(skipRender = false) {
+      localStorage.setItem('handbook_shopping_data', JSON.stringify(appData));
+      if (!skipRender) render();
+    }
+
+    function changeCurrency(curr) {
+      appData.currency = curr;
+      saveData();
+    }
+
+    function editMainTitle() {
+      const newTitle = prompt("修改主標題：", appData.mainTitle || "海外購物清單");
+      if (newTitle !== null && newTitle.trim() !== "") {
+        appData.mainTitle = newTitle.trim();
+        saveData();
+      }
+    }
+
+    function editSubTitle() {
+      const newText = prompt("修改副標題與備註說明：", appData.subTitle || "點擊此處可修改副標題與備註說明");
+      if (newText !== null) {
+        appData.subTitle = newText;
+        saveData();
+      }
+    }
+
+    function calculateTotals() {
+      let totalItems = 0, completedItems = 0, totalPriceSum = 0;
+
+      (appData.groups || []).forEach(group => {
+        const items = group.items || [];
+        totalItems += items.length;
+        completedItems += items.filter(i => i.checked).length;
+
+        items.forEach(i => {
+          if (i.price) {
+            const cleanPrice = String(i.price).replace(/,/g, '');
+            const numMatch = cleanPrice.match(/\d+(\.\d+)?/);
+            if (numMatch) {
+              totalPriceSum += parseFloat(numMatch[0]);
+            }
+          }
+        });
+      });
+
+      const curr = appData.currency || 'JPY';
+      const config = currencyConfig[curr] || currencyConfig.JPY;
+      const twdSum = Math.round(totalPriceSum * config.rate);
+
+      document.getElementById('completedCount').innerText = completedItems;
+      document.getElementById('totalCount').innerText = totalItems;
+      document.getElementById('totalPrice').innerText = totalPriceSum.toLocaleString();
+      document.getElementById('currencyUnit').innerText = config.unit;
+      document.getElementById('totalTwdPrice').innerText = twdSum.toLocaleString();
+    }
+
+    function render() {
+      const currentMainTitle = appData.mainTitle || '海外購物清單';
+      document.getElementById('mainTitleText').innerText = currentMainTitle;
+      document.title = currentMainTitle;
+      document.getElementById('subTitleText').innerText = appData.subTitle || '點擊此處可修改副標題與備註說明';
+      document.getElementById('currencySelect').value = appData.currency || 'JPY';
+
+      const groupList = document.getElementById('groupList');
+      groupList.innerHTML = '';
+
+      (appData.groups || []).forEach(group => {
+        const items = group.items || [];
+        const groupCount = items.length;
+        const groupCheckedCount = items.filter(i => i.checked).length;
+        const isCollapsed = group.collapsed;
+
+        const groupEl = document.createElement('div');
+        groupEl.className = 'dotted-box bg-paperCard p-3 transition-all';
+        
+        const headerClass = isCollapsed 
+          ? 'flex justify-between items-center' 
+          : 'flex justify-between items-center pb-2 mb-2 border-b border-dottedBorder/60';
+
+        groupEl.innerHTML = `
+          <div class="${headerClass}">
+            <div class="flex items-center gap-2 cursor-pointer flex-1" onclick="toggleGroup('${group.id}')">
+              <i class="fa-solid ${isCollapsed ? 'fa-caret-right' : 'fa-caret-down'} text-accentOrange"></i>
+              <span class="font-bold text-sm text-brandBrown" onclick="event.stopPropagation(); editGroupName('${group.id}')">${escapeHtml(group.name)}</span>
+              <span class="text-xs text-brandLightBrown">(${groupCheckedCount}/${groupCount})</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <button onclick="addItem('${group.id}')" class="text-xs text-accentGreen font-bold hover:underline"><i class="fa-solid fa-plus"></i> 新增項目</button>
+              <button onclick="deleteGroup('${group.id}')" class="text-xs text-gray-400 hover:text-red-400"><i class="fa-solid fa-trash-can"></i></button>
+            </div>
+          </div>
+          <div class="${isCollapsed ? 'hidden' : 'grid grid-cols-2 gap-2.5'}">
+            ${items.map(item => `
+              <div class="bg-paper p-2 rounded-xl border border-dottedBorder relative flex flex-col shadow-sm">
+                <button onclick="deleteItem('${group.id}', '${item.id}')" class="absolute top-1 right-1 text-gray-300 hover:text-red-400 text-xs z-10 p-1"><i class="fa-solid fa-xmark"></i></button>
+                <div onclick="openImageModal({type:'item', gId:'${group.id}', iId:'${item.id}'})" class="relative w-full h-24 bg-softGray rounded-lg overflow-hidden mb-1.5 flex items-center justify-center cursor-pointer hover:opacity-90 transition">
+                  ${item.image ? `<img src="${item.image}" class="w-full h-full object-cover">` : `<i class="fa-solid fa-image text-2xl text-gray-300"></i>`}
+                  <div class="absolute bottom-1 right-1 bg-brandBrown/80 text-white rounded-full w-6 h-6 flex items-center justify-center shadow">
+                    <i class="fa-solid fa-camera text-[10px]"></i>
+                  </div>
+                </div>
+                <div class="flex items-center gap-1.5 mb-1">
+                  <div class="custom-checkbox ${item.checked ? 'checked' : ''} flex-shrink-0" onclick="toggleCheck('${group.id}', '${item.id}')"></div>
+                  <input type="text" value="${escapeHtml(item.name)}" placeholder="商品名稱" oninput="updateItemInMemory('${group.id}', '${item.id}', 'name', this.value)" onchange="saveData()" class="bg-transparent text-xs font-bold text-brandBrown w-full focus:outline-none ${item.checked ? 'line-through text-gray-400' : ''}">
+                </div>
+                <input type="text" value="${escapeHtml(item.note)}" placeholder="顏色/數量/備註..." oninput="updateItemInMemory('${group.id}', '${item.id}', 'note', this.value)" onchange="saveData()" class="bg-white/80 px-2 py-0.5 rounded text-[11px] text-brandLightBrown w-full mb-1 border border-dottedBorder focus:outline-none">
+                <input type="text" value="${escapeHtml(item.price)}" placeholder="金額" oninput="updateItemInMemory('${group.id}', '${item.id}', 'price', this.value)" onchange="saveData()" class="bg-white/80 px-2 py-0.5 rounded text-[11px] text-left text-brandBrown w-full border border-dottedBorder focus:outline-none font-mono">
+              </div>
+            `).join('')}
+          </div>
+        `;
+        groupList.appendChild(groupEl);
+      });
+
+      const couponList = document.getElementById('couponList');
+      const couponCaret = document.getElementById('couponCaret');
+      const couponHeader = document.getElementById('couponHeader');
+      couponList.innerHTML = '';
+      
+      if (appData.couponCollapsed) {
+        couponList.classList.add('hidden');
+        couponCaret.className = 'fa-solid fa-caret-right text-accentOrange';
+        couponHeader.className = 'flex justify-between items-center';
+      } else {
+        couponList.classList.remove('hidden');
+        couponCaret.className = 'fa-solid fa-caret-down text-accentOrange';
+        couponHeader.className = 'flex justify-between items-center pb-2 mb-2 border-b border-dottedBorder/60';
+
+        (appData.coupons || []).forEach(coupon => {
+          const couponEl = document.createElement('div');
+          couponEl.className = 'bg-paper p-2 rounded-xl border border-dottedBorder relative flex flex-col shadow-sm';
+          couponEl.innerHTML = `
+            <button onclick="deleteCoupon('${coupon.id}')" class="absolute top-1 right-1 text-gray-300 hover:text-red-400 text-xs z-10 p-1"><i class="fa-solid fa-xmark"></i></button>
+            <div onclick="openImageModal({type:'coupon', cId:'${coupon.id}'})" class="relative w-full h-24 bg-softGray rounded-lg overflow-hidden mb-1.5 flex items-center justify-center cursor-pointer hover:opacity-90 transition">
+              ${coupon.image ? `<img src="${coupon.image}" class="w-full h-full object-cover">` : `<i class="fa-solid fa-ticket text-2xl text-gray-300"></i>`}
+              <div class="absolute bottom-1 right-1 bg-brandBrown/80 text-white rounded-full w-6 h-6 flex items-center justify-center shadow">
+                <i class="fa-solid fa-camera text-[10px]"></i>
+              </div>
+            </div>
+            <input type="text" value="${escapeHtml(coupon.name)}" placeholder="優惠券名稱" oninput="updateCouponInMemory('${coupon.id}', 'name', this.value)" onchange="saveData()" class="bg-transparent text-xs font-bold text-brandBrown w-full mb-1 focus:outline-none">
+            <input type="text" value="${escapeHtml(coupon.note)}" placeholder="折扣碼 / 門檻..." oninput="updateCouponInMemory('${coupon.id}', 'note', this.value)" onchange="saveData()" class="bg-white/80 px-2 py-0.5 rounded text-[11px] text-brandLightBrown w-full border border-dottedBorder focus:outline-none">
+          `;
+          couponList.appendChild(couponEl);
+        });
+      }
+
+      calculateTotals();
+    }
+
+    // 彈窗操作與圖片貼上邏輯
+    function openImageModal(target) {
+      activeImageTarget = target;
+      const modal = document.getElementById('imageActionModal');
+      const deleteBtn = document.getElementById('deleteImgBtn');
+
+      let hasImg = false;
+      if (target.type === 'coupon') {
+        const c = appData.coupons.find(x => x.id === target.cId);
+        if (c && c.image) hasImg = true;
+      } else if (target.type === 'item') {
+        const g = appData.groups.find(x => x.id === target.gId);
+        if (g) {
+          const i = g.items.find(x => x.id === target.iId);
+          if (i && i.image) hasImg = true;
+        }
+      }
+
+      if (hasImg) deleteBtn.classList.remove('hidden');
+      else deleteBtn.classList.add('hidden');
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeImageModal() {
+      document.getElementById('imageActionModal').classList.add('hidden');
+    }
+
+    async function pasteImageFromClipboard() {
+      try {
+        if (!navigator.clipboard || !navigator.clipboard.read) {
+          alert('您的瀏覽器不支援直接存取剪貼簿，請長按圖片區域或手動上傳。');
+          return;
+        }
+        const clipboardItems = await navigator.clipboard.read();
+        let foundImage = false;
+
+        for (const item of clipboardItems) {
+          for (const type of item.types) {
+            if (type.startsWith('image/')) {
+              const blob = await item.getType(type);
+              processImageFile(blob, activeImageTarget);
+              foundImage = true;
+              closeImageModal();
+              break;
+            }
+          }
+          if (foundImage) break;
+        }
+
+        if (!foundImage) {
+          alert('剪貼簿中未找到圖片！請確認您已在 iPhone 進行「拷貝」或「刪除並拷貝」截圖。');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('無法取得剪貼簿圖片，請確保授權允許存取剪貼簿，或使用從相簿選擇功能。');
+      }
+    }
+
+    function handleModalFileUpload(e) {
+      if (e.target.files[0] && activeImageTarget) {
+        processImageFile(e.target.files[0], activeImageTarget);
+        closeImageModal();
+      }
+    }
+
+    function deleteTargetImage() {
+      if (!activeImageTarget) return;
+      if (activeImageTarget.type === 'coupon') {
+        const c = appData.coupons.find(x => x.id === activeImageTarget.cId);
+        if (c) c.image = '';
+      } else if (activeImageTarget.type === 'item') {
+        const g = appData.groups.find(x => x.id === activeImageTarget.gId);
+        if (g) {
+          const i = g.items.find(x => x.id === activeImageTarget.iId);
+          if (i) i.image = '';
+        }
+      }
+      saveData();
+      closeImageModal();
+    }
+
+    function toggleCouponSection() { appData.couponCollapsed = !appData.couponCollapsed; saveData(); }
+    function addCoupon() { appData.coupons.push({ id: 'c_' + Date.now(), name: '新優惠券', note: '', image: '' }); appData.couponCollapsed = false; saveData(); }
+    function deleteCoupon(id) { appData.coupons = appData.coupons.filter(c => c.id !== id); saveData(); }
+    function updateCouponInMemory(cId, field, val) { const c = appData.coupons.find(x => x.id === cId); if(c) c[field] = val; }
+
+    function toggleGroup(id) { const g = appData.groups.find(x => x.id === id); if(g) { g.collapsed = !g.collapsed; saveData(); } }
+    function addNewGroup() { const name = prompt("請輸入新分類名稱：", "新分類"); if(name) { appData.groups.push({ id: 'g_' + Date.now(), name, collapsed: false, items: [] }); saveData(); } }
+    function editGroupName(id) { const g = appData.groups.find(x => x.id === id); if(g) { const n = prompt("修改分類名稱：", g.name); if(n) { g.name = n; saveData(); } } }
+    function deleteGroup(id) { if(confirm("確定刪除此分類？")) { appData.groups = appData.groups.filter(x => x.id !== id); saveData(); } }
+    function addItem(id) { const g = appData.groups.find(x => x.id === id); if(g) { g.items.push({ id: 'i_' + Date.now(), name: '新商品', note: '', price: '', image: '', checked: false }); g.collapsed = false; saveData(); } }
+    
+    function updateItemInMemory(gId, iId, field, val) { 
+      const g = appData.groups.find(x => x.id === gId); 
+      if(g) { 
+        const i = g.items.find(x => x.id === iId); 
+        if(i) {
+          i[field] = val;
+          if (field === 'price') calculateTotals();
+        }
+      } 
+    }
+    
+    function toggleCheck(gId, iId) { const g = appData.groups.find(x => x.id === gId); if(g) { const i = g.items.find(x => x.id === iId); if(i) { i.checked = !i.checked; saveData(); } } }
+    function deleteItem(gId, iId) { const g = appData.groups.find(x => x.id === gId); if(g) { g.items = g.items.filter(x => x.id !== iId); saveData(); } }
+
+    function processImageFile(file, target) {
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const img = new Image();
+        img.src = evt.target.result;
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          const maxW = 300; const scale = maxW / img.width;
+          canvas.width = maxW; canvas.height = img.height * scale;
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          const base64 = canvas.toDataURL('image/jpeg', 0.7);
+
+          if (target.type === 'coupon') {
+            const c = appData.coupons.find(x => x.id === target.cId);
+            if(c) c.image = base64;
+          } else if (target.type === 'item') {
+            const g = appData.groups.find(x => x.id === target.gId);
+            if(g) {
+              const i = g.items.find(x => x.id === target.iId);
+              if(i) i.image = base64;
+            }
+          }
+          saveData();
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function escapeHtml(str) { return (str || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+    render();
+  </script>
+</body>
+</html>
