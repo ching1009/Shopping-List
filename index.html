@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>日本購物清單</title>
+  
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="日本購物清單">
+  <meta name="theme-color" content="#FBF8F1">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            paper: '#FBF8F1',
+            paperCard: '#FFFDF9',
+            borderDotted: '#D9C3B0',
+            brandBrown: '#6B513E',
+            brandLightBrown: '#8C725E',
+            accentOrange: '#E07A5F',
+            accentGreen: '#81B29A',
+            softGray: '#EFECE6'
+          },
+          fontFamily: {
+            handwriting: ['"Zen Maru Gothic"', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #FBF8F1;
+      font-family: 'Zen Maru Gothic', sans-serif;
+      color: #6B513E;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    .dotted-box { border: 2px dashed #D9C3B0; border-radius: 16px; }
+    .dotted-line { border-bottom: 2px dashed #E5D5C5; }
+    .custom-checkbox {
+      width: 22px; height: 22px; border: 2px solid #E07A5F; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; cursor: pointer;
+    }
+    .custom-checkbox.checked { background-color: #E07A5F; }
+    .custom-checkbox.checked::after { content: '✓'; color: white; font-size: 14px; font-weight: bold; }
+    .editable-title { outline: none; border-bottom: 1px dashed transparent; transition: border-color 0.2s; }
+    .editable-title:focus { border-bottom-color: #E07A5F; background-color: rgba(224, 122, 95, 0.05); border-radius: 4px; }
+  </style>
+</head>
+<body class="pb-28 pt-4 px-3 max-w-md mx-auto min-h-screen relative">
+
+  <header class="text-center my-4 dotted-box p-4 bg-paperCard shadow-sm relative">
+    <div class="flex items-center justify-center gap-2 mb-1">
+      <i class="fa-solid fa-pen-nib text-accentOrange text-sm"></i>
+      <h1 id="appTitle" class="text-2xl font-bold text-brandBrown editable-title px-2 py-0.5" contenteditable="true" spellcheck="false">日本購物清單</h1>
+    </div>
+    <p id="appSubTitle" class="text-xs text-brandLightBrown editable-title px-2 py-0.5 inline-block" contenteditable="true" spellcheck="false">點擊此處可修改副標題與備註說明</p>
+  </header>
+
+  <div class="flex justify-between items-center px-2 mb-4 text-xs font-bold text-brandLightBrown">
+    <div class="flex gap-3">
+      <span>已完成: <span id="completedCount" class="text-accentGreen text-sm">0</span>/<span id="totalCount">0</span></span>
+      <span>預算總計: <span id="totalPrice" class="text-accentOrange text-sm">0</span> 円</span>
+    </div>
+    <button onclick="addNewGroup()" class="bg-brandBrown text-paper px-3 py-1.5 rounded-full text-xs font-normal shadow-sm active:scale-95 transition">
+      <i class="fa-solid fa-plus mr-1"></i>新增分類
+    </button>
+  </div>
+
+  <div id="groupList" class="space-y-4"></div>
+
+  <script>
+    // 若網址包含 reset 參數則清除舊紀錄
+    if (window.location.search.includes('reset=1')) {
+      localStorage.removeItem('handbook_shopping_data');
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    const defaultData = {
+      title: "日本購物清單",
+      subtitle: "點擊此處可修改副標題與備註說明",
+      groups: [
+        {
+          id: 'g1',
+          name: '藥妝店',
+          collapsed: false,
+          items: [
+            { id: 'i1', name: '資生堂吸油面紙', note: '', price: '', image: '', checked: false },
+            { id: 'i2', name: 'Love Liner 眉筆', note: '自然棕', price: '1200', image: '', checked: false }
+          ]
+        }
+      ]
+    };
+
+    let appData;
+    try {
+      appData = JSON.parse(localStorage.getItem('handbook_shopping_data')) || defaultData;
+      if (!appData.groups || !Array.isArray(appData.groups)) appData = defaultData;
+    } catch(e) {
+      appData = defaultData;
+    }
+
+    // 若舊資料標題仍為舊的名稱，自動更新為「日本購物清單」
+    if (!appData.title || appData.title === "日本購物與代購筆記") {
+      appData.title = "日本購物清單";
+    }
+
+    function saveData() {
+      localStorage.setItem('handbook_shopping_data', JSON.stringify(appData));
+      render();
+    }
+
+    const appTitleEl = document.getElementById('appTitle');
+    const appSubTitleEl = document.getElementById('appSubTitle');
+    
+    const currentTitle = appData.title || "日本購物清單";
+    appTitleEl.innerText = currentTitle;
+    document.title = currentTitle;
+    appSubTitleEl.innerText = appData.subtitle || "點擊此處可修改副標題與備註說明";
+
+    appTitleEl.addEventListener('blur', () => { 
+      const newTitle = appTitleEl.innerText.trim() || "未命名清單";
+      appData.title = newTitle; 
+      document.title = newTitle; 
+      saveData(); 
+    });
+    
+    appSubTitleEl.addEventListener('blur', () => { appData.subtitle = appSubTitleEl.innerText.trim(); saveData(); });
+
+    function render() {
+      const groupList = document.getElementById('groupList');
+      groupList.innerHTML = '';
+      let totalItems = 0, completedItems = 0, totalPriceSum = 0;
+
+      (appData.groups || []).forEach(group => {
+        const items = group.items || [];
+        const groupCount = items.length;
+        const groupCheckedCount = items.filter(i => i.checked).length;
+        totalItems += groupCount;
+        completedItems += groupCheckedCount;
+
+        items.forEach(i => {
+          if (i.price) {
+            const numMatch = String(i.price).match(/\d+(\.\d+)?/);
+            if (numMatch) {
+              totalPriceSum += parseFloat(numMatch[0]);
+            }
+          }
+        });
+
+        const groupEl = document.createElement('div');
+        groupEl.className = 'dotted-box bg-paperCard p-3 transition-all';
+        groupEl.innerHTML = `
+          <div class="flex justify-between items-center dotted-line pb-2 mb-3">
+            <div class="flex items-center gap-2 cursor-pointer flex-1" onclick="toggleGroup('${group.id}')">
+              <i class="fa-solid ${group.collapsed ? 'fa-caret-right' : 'fa-caret-down'} text-accentOrange"></i>
+              <span class="font-bold text-base text-brandBrown" onclick="event.stopPropagation(); editGroupName('${group.id}')">${escapeHtml(group.name)}</span>
+              <span class="text-xs text-brandLightBrown">(${groupCheckedCount}/${groupCount})</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <button onclick="addItem('${group.id}')" class="text-xs text-accentGreen font-bold hover:underline"><i class="fa-solid fa-plus"></i> 新增項目</button>
+              <button onclick="deleteGroup('${group.id}')" class="text-xs text-gray-400 hover:text-red-400"><i class="fa-solid fa-trash-can"></i></button>
+            </div>
+          </div>
+          <div class="${group.collapsed ? 'hidden' : 'grid grid-cols-2 gap-3'}">
+            ${items.map(item => `
+              <div class="bg-paper p-2.5 rounded-xl border border-dottedBorder relative flex flex-col justify-between shadow-sm">
+                <button onclick="deleteItem('${group.id}', '${item.id}')" class="absolute top-1.5 right-1.5 text-gray-300 hover:text-red-400 text-xs z-10 p-1"><i class="fa-solid fa-xmark"></i></button>
+                <div class="relative w-full h-28 bg-softGray rounded-lg overflow-hidden mb-2 flex items-center justify-center">
+                  ${item.image ? `<img src="${item.image}" class="w-full h-full object-cover">` : `<i class="fa-solid fa-image text-2xl text-gray-300"></i>`}
+                  <label class="absolute bottom-1 right-1 bg-brandBrown/80 text-white rounded-full w-7 h-7 flex items-center justify-center cursor-pointer shadow">
+                    <i class="fa-solid fa-camera text-xs"></i>
+                    <input type="file" accept="image/*" class="hidden" onchange="uploadImage(event, '${group.id}', '${item.id}')">
+                  </label>
+                </div>
+                <div class="flex items-start gap-1.5 mb-2">
+                  <div class="custom-checkbox ${item.checked ? 'checked' : ''} mt-0.5 flex-shrink-0" onclick="toggleCheck('${group.id}', '${item.id}')"></div>
+                  <input type="text" value="${escapeHtml(item.name)}" placeholder="商品名稱" onchange="updateItem('${group.id}', '${item.id}', 'name', this.value)" class="bg-transparent text-xs font-bold text-brandBrown w-full focus:outline-none border-b border-transparent focus:border-accentOrange ${item.checked ? 'line-through text-gray-400' : ''}">
+                </div>
+                <input type="text" value="${escapeHtml(item.note)}" placeholder="數量 / 顏色 / 備註..." onchange="updateItem('${group.id}', '${item.id}', 'note', this.value)" class="bg-white/80 px-2 py-1 rounded text-[11px] text-brandLightBrown w-full mb-1.5 border border-dottedBorder focus:outline-none">
+                <div class="relative">
+                  <input type="text" value="${escapeHtml(item.price)}" placeholder="預估/購買金額" onchange="updateItem('${group.id}', '${item.id}', 'price', this.value)" class="bg-white/80 px-2 py-1 rounded text-[11px] text-left text-brandBrown w-full border border-dottedBorder focus:outline-none font-mono">
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+        groupList.appendChild(groupEl);
+      });
+
+      document.getElementById('completedCount').innerText = completedItems;
+      document.getElementById('totalCount').innerText = totalItems;
+      document.getElementById('totalPrice').innerText = totalPriceSum.toLocaleString();
+    }
+
+    function toggleGroup(id) { const g = appData.groups.find(x => x.id === id); if(g) { g.collapsed = !g.collapsed; saveData(); } }
+    function addNewGroup() { const name = prompt("請輸入新分類名稱：", "新分類"); if(name) { appData.groups.push({ id: 'g_' + Date.now(), name, collapsed: false, items: [] }); saveData(); } }
+    function editGroupName(id) { const g = appData.groups.find(x => x.id === id); if(g) { const n = prompt("修改分類名稱：", g.name); if(n) { g.name = n; saveData(); } } }
+    function deleteGroup(id) { if(confirm("確定刪除此分類？")) { appData.groups = appData.groups.filter(x => x.id !== id); saveData(); } }
+    function addItem(id) { const g = appData.groups.find(x => x.id === id); if(g) { g.items.push({ id: 'i_' + Date.now(), name: '新商品', note: '', price: '', image: '', checked: false }); g.collapsed = false; saveData(); } }
+    function updateItem(gId, iId, field, val) { const g = appData.groups.find(x => x.id === gId); if(g) { const i = g.items.find(x => x.id === iId); if(i) { i[field] = val; saveData(); } } }
+    function toggleCheck(gId, iId) { const g = appData.groups.find(x => x.id === gId); if(g) { const i = g.items.find(x => x.id === iId); if(i) { i.checked = !i.checked; saveData(); } } }
+    function deleteItem(gId, iId) { const g = appData.groups.find(x => x.id === gId); if(g) { g.items = g.items.filter(x => x.id !== iId); saveData(); } }
+    function uploadImage(e, gId, iId) {
+      const file = e.target.files[0]; if(!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const img = new Image();
+        img.src = evt.target.result;
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          const maxW = 300; const scale = maxW / img.width;
+          canvas.width = maxW; canvas.height = img.height * scale;
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          updateItem(gId, iId, 'image', canvas.toDataURL('image/jpeg', 0.7));
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+    function escapeHtml(str) { return (str || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+    render();
+  </script>
+</body>
+</html>
