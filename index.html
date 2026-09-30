@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -105,10 +104,21 @@
 
     const appTitleEl = document.getElementById('appTitle');
     const appSubTitleEl = document.getElementById('appSubTitle');
-    appTitleEl.innerText = appData.title || "日本購物與代購筆記";
+    
+    // 初始化畫面標題與瀏覽器分頁標題
+    const currentTitle = appData.title || "日本購物與代購筆記";
+    appTitleEl.innerText = currentTitle;
+    document.title = currentTitle;
     appSubTitleEl.innerText = appData.subtitle || "點擊此處可修改副標題與備註說明";
 
-    appTitleEl.addEventListener('blur', () => { appData.title = appTitleEl.innerText.trim() || "未命名清單"; saveData(); });
+    // 監聽標題修改：修改畫面標題時，同步更新瀏覽器分頁標題 (document.title)
+    appTitleEl.addEventListener('blur', () => { 
+      const newTitle = appTitleEl.innerText.trim() || "未命名清單";
+      appData.title = newTitle; 
+      document.title = newTitle; 
+      saveData(); 
+    });
+    
     appSubTitleEl.addEventListener('blur', () => { appData.subtitle = appSubTitleEl.innerText.trim(); saveData(); });
 
     function render() {
